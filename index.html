@@ -956,28 +956,53 @@
             }
         });
 
-        // "Export Backup" Button
+                // "Export to Excel (CSV)" Button
         document.getElementById('btnExport').addEventListener('click', () => {
-            const exportData = { start: startDate, data: appData };
-            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-
+            // Create headers for the Excel sheet
+            const headers = ['Day', 'Date', 'Gym', 'Sleep', 'No Smoking', 'No Alcohol', 'No Masturbation', 'Protein', 'Calories', 'Fibre', 'Weight (kg)', 'Daily Score'];
+            let csvContent = headers.join(',') + '\n';
+            
+            // Loop through all 90 days and organize the data
+            for (let i = 1; i <= 90; i++) {
+                let dayData = appData[i];
+                
+                // Calculate the specific calendar date
+                let dt = new Date(startDate + 'T00:00:00'); 
+                dt.setDate(dt.getDate() + i - 1);
+                let dateStr = dt.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+                
+                if (dayData) {
+                    let currentScore = calculateScore(dayData);
+                    let row = [
+                        i,
+                        `"${dateStr}"`, // Wrap in quotes so Excel reads the comma properly
+                        dayData.gym ? 'Yes' : 'No',
+                        dayData.sleep ? 'Yes' : 'No',
+                        dayData.smoke ? 'Yes' : 'No',
+                        dayData.alcohol ? 'Yes' : 'No',
+                        dayData.masturbation ? 'Yes' : 'No',
+                        dayData.protein ? 'Yes' : 'No',
+                        dayData.calories || '',
+                        dayData.fibre || '',
+                        dayData.weight || '',
+                        `${currentScore}/6`
+                    ];
+                    csvContent += row.join(',') + '\n';
+                } else {
+                    // If the day hasn't happened yet, just leave it blank
+                    let row = [i, `"${dateStr}"`, '', '', '', '', '', '', '', '', '', ''];
+                    csvContent += row.join(',') + '\n';
+                }
+            }
+            
+            // Trigger the download as a CSV file
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'hard-90-backup.json';
+            link.download = 'hard-90-progress.csv';
             link.click();
-
-            showToast('Backup exported');
-        });
-
-        // "Reset Challenge" Button
-        document.getElementById('btnReset').addEventListener('click', async () => {
-            if (confirm('Reset the entire challenge? This cannot be undone.')) {
-                appData = {};
-                localStorage.removeItem(STORAGE_KEY);
-                await syncToCloud(); // Clear the cloud document
-                loadDay(calculateDayToday());
-                showToast('Challenge reset');
-            }
+            
+            showToast('Excel file downloaded!');
         });
 
         // ==========================================
